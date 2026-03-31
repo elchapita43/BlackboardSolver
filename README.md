@@ -62,15 +62,6 @@ npm run build
 npm run test:e2e
 ```
 
-## Publicar en GitHub
-
-Antes de subir el repo:
-
-1. Verifica que `.env` no exista o quede fuera del commit.
-2. No subas `.data/`, perfiles de Chrome, logs ni reportes de Playwright.
-3. Si alguna vez pegaste una API key real en un chat o archivo local, rotala.
-4. Revisa el diff antes del primer push desde GitHub Desktop.
-
 ## Flujo funcional actual
 
 1. Sincronizas tareas pendientes desde Blackboard.
