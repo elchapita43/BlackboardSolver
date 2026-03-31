@@ -14,6 +14,13 @@ App local para:
 - SQLite (`better-sqlite3`)
 - Frontend vanilla (`public/`)
 
+## Plataforma
+
+- Windows 10/11
+- Google Chrome instalado localmente
+
+La version actual del scraper esta orientada a Windows porque reutiliza rutas y perfiles locales de Chrome en ese entorno.
+
 ## Requisitos
 
 - Node.js 20+
@@ -77,6 +84,10 @@ Antes de subir el repo:
 - No subas `credentials.json` ni API keys.
 - Si compartiste una key por chat, rotala.
 - Este repo esta preparado para publicarse sin incluir sesiones, bases locales ni credenciales.
+
+## Licencia
+
+Este proyecto se distribuye bajo licencia MIT. Ver [`LICENSE`](C:/Users/Tobia/OneDrive/Aplicaciones/BlackboardSolver/LICENSE).
 
 ## Estado del proyecto
 
