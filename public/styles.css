@@ -1,0 +1,326 @@
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --panel: rgba(255, 255, 255, 0.88);
+  --panel-border: rgba(18, 42, 66, 0.12);
+  --text: #13212f;
+  --muted: #536679;
+  --accent: #0a7ea4;
+  --accent-dark: #05566f;
+  --success: #1a8f4d;
+  --warning: #a56a00;
+  --danger: #b42318;
+  --shadow: 0 18px 60px rgba(10, 31, 53, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(10, 126, 164, 0.18), transparent 28%),
+    linear-gradient(180deg, #f7fafc 0%, var(--bg) 100%);
+}
+
+.app-shell {
+  width: min(1120px, calc(100vw - 32px));
+  margin: 32px auto 48px;
+  display: grid;
+  gap: 20px;
+}
+
+.hero,
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(16px);
+}
+
+.hero h1,
+.panel h2,
+.task-card h3,
+.source-card h3 {
+  margin: 0;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.78rem;
+  color: var(--accent-dark);
+}
+
+.lead,
+.hint,
+#meta,
+.source-card p,
+.description,
+.meta-line,
+.source {
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 24px 0 12px;
+}
+
+button,
+select,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+  color: white;
+  padding: 12px 20px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.status-pill,
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.status-pill.idle,
+.badge.unknown {
+  background: rgba(83, 102, 121, 0.14);
+  color: var(--muted);
+}
+
+.status-pill.loading {
+  background: rgba(165, 106, 0, 0.14);
+  color: var(--warning);
+}
+
+.status-pill.success,
+.badge.pending,
+.badge.upcoming {
+  background: rgba(26, 143, 77, 0.14);
+  color: var(--success);
+}
+
+.status-pill.error,
+.badge.overdue {
+  background: rgba(180, 35, 24, 0.12);
+  color: var(--danger);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: baseline;
+  margin-bottom: 16px;
+}
+
+.warnings {
+  margin-bottom: 16px;
+  border-left: 4px solid var(--warning);
+  background: rgba(165, 106, 0, 0.08);
+  padding: 12px 16px;
+  border-radius: 12px;
+}
+
+.hidden {
+  display: none;
+}
+
+.task-list,
+.source-list {
+  display: grid;
+  gap: 14px;
+}
+
+.task-card,
+.source-card,
+.detail-card {
+  border: 1px solid rgba(18, 42, 66, 0.08);
+  background: white;
+  border-radius: 18px;
+  padding: 16px;
+}
+
+.task-card.selected {
+  border-color: rgba(10, 126, 164, 0.36);
+  box-shadow: 0 10px 24px rgba(10, 126, 164, 0.12);
+}
+
+.task-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 10px 0;
+}
+
+.description {
+  margin: 0 0 14px;
+}
+
+.task-card a {
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+
+.card-actions,
+.chat-actions,
+.detail-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.card-actions {
+  margin-top: 14px;
+}
+
+.secondary-button {
+  background: rgba(10, 126, 164, 0.12);
+  color: var(--accent-dark);
+}
+
+.detail-controls {
+  margin-bottom: 12px;
+}
+
+.detail-controls select,
+.detail-controls input,
+.chat-form textarea {
+  width: 100%;
+  border: 1px solid rgba(18, 42, 66, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 12px 14px;
+  color: var(--text);
+}
+
+.detail-controls select {
+  max-width: 340px;
+}
+
+.detail-controls input {
+  flex: 1 1 360px;
+}
+
+.detail-card h3,
+.detail-block h4 {
+  margin: 0 0 10px;
+}
+
+.detail-block + .detail-block,
+.detail-metadata {
+  margin-top: 16px;
+}
+
+.detail-block p,
+.detail-metadata p {
+  margin: 0 0 8px;
+}
+
+.chat-log {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.chat-bubble {
+  border-radius: 18px;
+  padding: 14px 16px;
+  max-width: min(760px, 100%);
+}
+
+.chat-bubble.user {
+  justify-self: end;
+  background: rgba(10, 126, 164, 0.12);
+}
+
+.chat-bubble.assistant {
+  justify-self: start;
+  background: rgba(18, 42, 66, 0.06);
+}
+
+.chat-role {
+  display: inline-block;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.chat-bubble p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.empty {
+  color: var(--muted);
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed rgba(18, 42, 66, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.source-warning {
+  color: var(--warning);
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    width: min(100vw - 20px, 100%);
+    margin-top: 16px;
+  }
+
+  .panel-header,
+  .actions,
+  .task-topline,
+  .detail-controls,
+  .chat-actions,
+  .card-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .detail-controls select,
+  .detail-controls input {
+    max-width: 100%;
+  }
+}

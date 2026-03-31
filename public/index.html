@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BlackboardSolver</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero">
+        <p class="eyebrow">Blackboard Palermo</p>
+        <h1>Tareas, detalle y chat</h1>
+        <p class="lead">
+          La app sincroniza tareas desde Blackboard Ultra, guarda contexto en SQLite y puede leer el
+          detalle de una evaluacion puntual para pasarlo al asistente.
+        </p>
+        <div class="actions">
+          <button id="syncButton" type="button">Sincronizar ahora</button>
+          <span id="statusPill" class="status-pill idle">Sin sincronizar</span>
+        </div>
+        <p class="hint">
+          El modo chat usa OpenRouter. Define <code>OPENROUTER_API_KEY</code> y, si queres cambiarlo,
+          <code>OPENROUTER_MODEL</code>. Por defecto usa <code>qwen/qwen3.6-plus-preview:free</code>.
+        </p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Ultimo resultado</h2>
+          <p id="meta">Todavia no hay datos guardados.</p>
+        </div>
+
+        <div id="warnings" class="warnings hidden"></div>
+        <div id="tasks" class="task-list empty">No hay tareas cargadas todavia.</div>
+      </section>
+
+      <section class="panel secondary">
+        <div class="panel-header">
+          <h2>Fuentes inspeccionadas</h2>
+          <p>Se guarda HTML y captura de cada pagina revisada dentro de <code>.data/debug</code>.</p>
+        </div>
+        <div id="sources" class="source-list empty">No hay ejecuciones todavia.</div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Detalle de tarea</h2>
+          <p>Selecciona una tarea sincronizada o pega una URL directa de Blackboard.</p>
+        </div>
+
+        <div class="detail-controls">
+          <select id="taskSelect">
+            <option value="">Seleccionar tarea...</option>
+          </select>
+          <input
+            id="taskUrlInput"
+            type="url"
+            placeholder="https://palermo.blackboard.com/ultra/calendar/assessment/..."
+          />
+          <button id="fetchDetailButton" type="button">Leer detalle</button>
+        </div>
+
+        <p id="detailStatus" class="hint">
+          Si la tarea todavia no tiene URL directa, pega la URL de la evaluacion para extraer
+          instrucciones y adjuntos.
+        </p>
+
+        <div id="taskDetail" class="detail-card empty">Todavia no hay detalle cargado.</div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Chat</h2>
+          <p>El asistente usa el contexto guardado en SQLite y el detalle scrapeado cuando exista.</p>
+        </div>
+
+        <div id="chatLog" class="chat-log empty">Todavia no hay mensajes.</div>
+
+        <form id="chatForm" class="chat-form">
+          <textarea
+            id="chatInput"
+            rows="4"
+            placeholder="Ej: organizame las tareas de esta semana, o ayudame a resolver esta actividad paso a paso."
+          ></textarea>
+          <div class="chat-actions">
+            <span id="chatMeta" class="hint">Sin conversacion iniciada.</span>
+            <button id="chatSendButton" type="submit">Enviar</button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>

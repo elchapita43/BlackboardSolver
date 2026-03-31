@@ -1,0 +1,22 @@
+node_modules/
+.data/
+dist/
+.dist/
+playwright-report/
+test-results/
+coverage/
+*.log
+*.tmp
+*.local
+.idea/
+.vscode/
+.history/
+*.tsbuildinfo
+.npm/
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+.env.*
+!.env.example
