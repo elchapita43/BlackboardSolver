@@ -157,7 +157,8 @@ function buildSystemPrompt(input: {
           : "",
         input.selectedDetail.attachments.length > 0
           ? `Adjuntos:\n${input.selectedDetail.attachments.map((item) => `- ${item.name}${item.url ? ` (${item.url})` : ""}`).join("\n")}`
-          : ""
+          : "",
+        buildAttachmentContext(input.selectedDetail)
       ]
         .filter(Boolean)
         .join("\n\n")
@@ -177,10 +178,34 @@ function buildSystemPrompt(input: {
     "Responde en espanol claro y concreto.",
     "Usa solamente el contexto provisto. Si falta informacion, dilo explicitamente.",
     "Si el usuario pide resolver una tarea, ayuda a entenderla, organizar pasos y producir una respuesta trabajada, pero no inventes datos que no aparezcan en la consigna.",
+    "Si existe texto indexado de adjuntos, priorizalo sobre el HTML ruidoso de Blackboard.",
     taskContext,
     detailContext,
     `Tareas recientes:\n${pendingTasksContext}`
   ].join("\n\n");
+}
+
+function buildAttachmentContext(detail: TaskDetail): string {
+  const indexedAttachments = detail.attachments.filter((attachment) => attachment.extractedText?.trim());
+  if (indexedAttachments.length === 0) {
+    return "";
+  }
+
+  let remainingBudget = 12000;
+  const sections: string[] = [];
+
+  for (const attachment of indexedAttachments) {
+    const text = attachment.extractedText?.trim() || "";
+    if (!text || remainingBudget <= 0) {
+      continue;
+    }
+
+    const excerpt = text.slice(0, remainingBudget);
+    remainingBudget -= excerpt.length;
+    sections.push(`Adjunto indexado: ${attachment.name}\n${excerpt}`);
+  }
+
+  return sections.length > 0 ? `Contenido indexado de adjuntos:\n\n${sections.join("\n\n")}` : "";
 }
 
 async function requestOpenRouterCompletion(

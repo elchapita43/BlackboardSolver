@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { chromium, type BrowserContext, type Page } from "playwright";
+import { enrichTaskDetailAttachments } from "../attachment-ingestion";
 import type {
   PendingTask,
   ScrapeSourceResult,
@@ -142,11 +143,12 @@ export async function fetchTaskDetail(
       throw new Error("Necesito una tarea sincronizada o una URL valida para releer el detalle.");
     }
 
-    return scrapeTaskDetailFromCurrentPage(detailPage, dataDir, {
+    const detail = await scrapeTaskDetailFromCurrentPage(detailPage, dataDir, {
       taskId: input.taskId,
       fallbackTitle: input.task?.title,
       fallbackCourse: input.task?.course
     });
+    return enrichTaskDetailAttachments(detail, detailPage, dataDir);
   } finally {
     await context.close();
   }
@@ -189,7 +191,7 @@ export async function hydrateTaskDetailsFromCalendar(
           fallbackTitle: task.title,
           fallbackCourse: task.course
         });
-        details.push(detail);
+        details.push(await enrichTaskDetailAttachments(detail, detailPage, dataDir));
       } catch (error) {
         failures.push({
           taskId: task.id,
@@ -380,13 +382,20 @@ async function scrapeTaskDetailFromCurrentPage(
           const data = node.getAttribute("data-bbfile");
           let name = normalizeText(node.getAttribute("aria-label")) || normalizeText(node.textContent);
 
-          let url = absolutizeUrl(node.getAttribute("href"));
+          const hrefUrl = absolutizeUrl(node.getAttribute("href"));
+          let url = hrefUrl;
           let kind = undefined;
+          let alternateUrls = hrefUrl ? [hrefUrl] : [];
 
           if (data) {
             try {
               const parsed = JSON.parse(data);
-              url = parsed.viewerUrl || parsed.resourceUrl || url;
+              alternateUrls = [
+                ...alternateUrls,
+                absolutizeUrl(parsed.resourceUrl),
+                absolutizeUrl(parsed.viewerUrl)
+              ].filter(Boolean);
+              url = alternateUrls[0] || url;
               kind = parsed.mimeType || undefined;
               if (!name && parsed.displayName) {
                 name = normalizeText(parsed.displayName);
@@ -403,6 +412,7 @@ async function scrapeTaskDetailFromCurrentPage(
           attachments.push({
             name,
             url: absolutizeUrl(url),
+            alternateUrls,
             kind
           });
         }

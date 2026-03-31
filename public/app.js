@@ -10,6 +10,7 @@ const sourcesPanel = document.querySelector("#sourcesPanel");
 const sourcesHeader = document.querySelector("#sourcesHeader");
 const sourcesContent = document.querySelector("#sourcesContent");
 const taskUrlInput = document.querySelector("#taskUrlInput");
+const solveTaskButton = document.querySelector("#solveTaskButton");
 const fetchDetailButton = document.querySelector("#fetchDetailButton");
 const taskDetail = document.querySelector("#taskDetail");
 const chatLog = document.querySelector("#chatLog");
@@ -43,6 +44,25 @@ const escapeHtml = (value) =>
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+
+const formatAttachmentStatus = (attachment) => {
+  switch (attachment.ingestionStatus) {
+    case "indexed":
+      return attachment.extractedText?.trim()
+        ? `Indexado (${attachment.extractedText.length} caracteres)`
+        : "Indexado";
+    case "requires_ocr":
+      return "Descargado, pero necesita OCR";
+    case "downloaded":
+      return "Descargado";
+    case "unsupported":
+      return "Descargado, sin extractor todavia";
+    case "failed":
+      return "Fallo la ingesta";
+    default:
+      return "Detectado";
+  }
+};
 
 // Toast Notification System
 const showToast = (message, type = "info", duration = 5000) => {
@@ -206,8 +226,8 @@ const renderTaskDetail = (detail) => {
           ? detail.attachments
               .map((attachment) =>
                 attachment.url
-                  ? `<p><a href="${escapeHtml(attachment.url)}" target="_blank" rel="noreferrer" class="attachment-link">${escapeHtml(attachment.name)}</a></p>`
-                  : `<p>${escapeHtml(attachment.name)}</p>`
+                  ? `<p><a href="${escapeHtml(attachment.url)}" target="_blank" rel="noreferrer" class="attachment-link">${escapeHtml(attachment.name)}</a><br><span class="hint">${escapeHtml(formatAttachmentStatus(attachment))}</span></p>`
+                  : `<p>${escapeHtml(attachment.name)}<br><span class="hint">${escapeHtml(formatAttachmentStatus(attachment))}</span></p>`
               )
               .join("")
           : "<p class='hint'>No se detectaron adjuntos estructurados.</p>"
@@ -323,6 +343,57 @@ const selectTask = async (taskId) => {
     await loadSelectedTask();
   } else {
     renderTaskDetail(null);
+  }
+};
+
+const sendChatMessage = async (message) => {
+  if (!message.trim()) return;
+
+  chatSendButton.disabled = true;
+  chatInput.disabled = true;
+  if (solveTaskButton) solveTaskButton.disabled = true;
+
+  state.chatMessages.push({ role: "user", content: message });
+  renderChat();
+  chatInput.value = "";
+
+  state.chatMessages.push({ role: "assistant", content: "..." });
+  renderChat();
+
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        threadId: state.chatThreadId || undefined,
+        taskId: state.selectedTaskId || undefined,
+        message
+      })
+    });
+    const payload = await response.json();
+
+    state.chatMessages.pop();
+
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.error || "No se pudo procesar la respuesta.");
+    }
+
+    state.chatThreadId = payload.threadId;
+    state.chatMessages.push({ role: "assistant", content: payload.reply });
+    renderChat();
+  } catch (error) {
+    state.chatMessages.pop();
+    state.chatMessages.push({
+      role: "assistant",
+      content: `**Error:** ${error instanceof Error ? error.message : String(error)}`
+    });
+    renderChat();
+    showToast("Error de conexión con el asistente.", "error");
+  } finally {
+    chatSendButton.disabled = false;
+    chatInput.disabled = false;
+    if (solveTaskButton) solveTaskButton.disabled = false;
+    chatInput.focus();
   }
 };
 
@@ -456,6 +527,22 @@ chatForm.addEventListener("submit", async (event) => {
     chatInput.focus();
   }
 });
+
+if (solveTaskButton) {
+  solveTaskButton.addEventListener("click", async () => {
+    if (!state.selectedTaskId) {
+      showToast("Selecciona una tarea antes de pedir una resolución.", "warning");
+      return;
+    }
+
+    const task = state.tasks.find((item) => item.id === state.selectedTaskId);
+    const prompt = task
+      ? `Intenta resolver la tarea "${task.title}" con todo el contexto disponible. Si hay ejercicios, resuelvelos paso a paso. Si falta informacion o el adjunto no alcanza, dilo explicitamente.`
+      : "Intenta resolver la tarea actual con todo el contexto disponible. Si falta informacion, dilo explicitamente.";
+
+    await sendChatMessage(prompt);
+  });
+}
 
 // UI Interactions
 chatInput.addEventListener("keydown", (e) => {

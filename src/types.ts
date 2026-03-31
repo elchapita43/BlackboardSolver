@@ -21,7 +21,15 @@ export interface TaskRecord extends PendingTask {
 export interface TaskAttachment {
   name: string;
   url?: string;
+  alternateUrls?: string[];
   kind?: string;
+  contentType?: string;
+  localPath?: string;
+  byteSize?: number;
+  ingestionStatus?: "detected" | "downloaded" | "indexed" | "requires_ocr" | "unsupported" | "failed";
+  extractedText?: string;
+  extractedAt?: string;
+  extractionError?: string;
 }
 
 export interface TaskMetadataItem {

@@ -74,7 +74,21 @@ export class SyncService {
   }
 
   private startDetailHydration(snapshotTasks: StoredSnapshot["tasks"]): void {
-    const tasksToHydrate = snapshotTasks.filter((task) => !this.database.getTaskDetail(task.id));
+    const tasksToHydrate = snapshotTasks.filter((task) => {
+      const detail = this.database.getTaskDetail(task.id);
+      if (!detail) {
+        return true;
+      }
+
+      return detail.attachments.some(
+        (attachment) =>
+          Boolean(attachment.url) &&
+          (!attachment.ingestionStatus ||
+            attachment.ingestionStatus === "detected" ||
+            attachment.ingestionStatus === "downloaded" ||
+            attachment.ingestionStatus === "failed")
+      );
+    });
     if (tasksToHydrate.length === 0 || this.detailHydrationRun) {
       return;
     }
