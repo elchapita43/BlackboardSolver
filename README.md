@@ -35,6 +35,13 @@ npx playwright install chromium
 cp .env.example .env
 ```
 
+Si prefieres credenciales por archivo local en lugar de variables de entorno:
+
+```powershell
+New-Item -ItemType Directory -Force .data | Out-Null
+Copy-Item credentials.example.json .data/credentials.json
+```
+
 ## Variables de entorno
 
 Revisar `.env.example`.
@@ -45,6 +52,10 @@ Clave para chat:
 
 Configuracion util para tests o fail-fast de login:
 - `BLACKBOARD_LOGIN_WAIT_TIMEOUT_MS` (default `180000`)
+
+Credenciales de Blackboard:
+- via variables `BLACKBOARD_USERNAME` y `BLACKBOARD_PASSWORD`
+- o via archivo local no versionado `.data/credentials.json`
 
 ## Ejecutar
 
