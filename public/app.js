@@ -1,19 +1,23 @@
+// UI Elements
 const syncButton = document.querySelector("#syncButton");
 const statusPill = document.querySelector("#statusPill");
 const meta = document.querySelector("#meta");
 const tasksContainer = document.querySelector("#tasks");
 const warningsContainer = document.querySelector("#warnings");
 const sourcesContainer = document.querySelector("#sources");
-const taskSelect = document.querySelector("#taskSelect");
+const sourcesPanel = document.querySelector("#sourcesPanel");
+const sourcesHeader = document.querySelector("#sourcesHeader");
+const sourcesContent = document.querySelector("#sourcesContent");
 const taskUrlInput = document.querySelector("#taskUrlInput");
 const fetchDetailButton = document.querySelector("#fetchDetailButton");
-const detailStatus = document.querySelector("#detailStatus");
 const taskDetail = document.querySelector("#taskDetail");
 const chatLog = document.querySelector("#chatLog");
 const chatForm = document.querySelector("#chatForm");
 const chatInput = document.querySelector("#chatInput");
 const chatSendButton = document.querySelector("#chatSendButton");
 const chatMeta = document.querySelector("#chatMeta");
+const chatScrollArea = document.querySelector("#chatScrollArea");
+const toastContainer = document.querySelector("#toastContainer");
 
 const state = {
   snapshot: null,
@@ -24,6 +28,7 @@ const state = {
   chatMessages: []
 };
 
+// Utils
 const setStatus = (label, stateName) => {
   statusPill.textContent = label;
   statusPill.className = `status-pill ${stateName}`;
@@ -37,6 +42,35 @@ const escapeHtml = (value) =>
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
 
+// Toast Notification System
+const showToast = (message, type = "info", duration = 5000) => {
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  
+  toast.innerHTML = `
+    <span>${escapeHtml(message)}</span>
+    <button class="toast-close" type="button">&times;</button>
+  `;
+
+  const closeBtn = toast.querySelector(".toast-close");
+  
+  const removeToast = () => {
+    toast.style.animation = "fadeOut 0.3s forwards";
+    setTimeout(() => {
+      if (toast.parentNode) toast.remove();
+    }, 300);
+  };
+
+  closeBtn.addEventListener("click", removeToast);
+  
+  toastContainer.appendChild(toast);
+
+  if (duration > 0) {
+    setTimeout(removeToast, duration);
+  }
+};
+
+// Render Functions
 const renderWarnings = (warnings) => {
   if (!warnings?.length) {
     warningsContainer.classList.add("hidden");
@@ -51,7 +85,7 @@ const renderWarnings = (warnings) => {
 const renderSources = (sources) => {
   if (!sources?.length) {
     sourcesContainer.className = "source-list empty";
-    sourcesContainer.textContent = "No hay fuentes inspeccionadas todavia.";
+    sourcesContainer.textContent = "No hay fuentes inspeccionadas todavía.";
     return;
   }
 
@@ -70,22 +104,12 @@ const renderSources = (sources) => {
     .join("");
 };
 
-const renderTaskOptions = () => {
-  const options = ['<option value="">Seleccionar tarea...</option>'];
-
-  for (const task of state.tasks) {
-    options.push(
-      `<option value="${escapeHtml(task.id)}"${task.id === state.selectedTaskId ? " selected" : ""}>${escapeHtml(task.title)}</option>`
-    );
-  }
-
-  taskSelect.innerHTML = options.join("");
-};
-
 const renderTasks = (tasks) => {
+  meta.textContent = String(tasks?.length || 0);
+
   if (!tasks?.length) {
     tasksContainer.className = "task-list empty";
-    tasksContainer.innerHTML = "No se detectaron tareas pendientes con las heuristicas actuales.";
+    tasksContainer.innerHTML = "No se detectaron tareas pendientes.";
     return;
   }
 
@@ -94,7 +118,7 @@ const renderTasks = (tasks) => {
     .map((task) => {
       const selected = task.id === state.selectedTaskId;
       return `
-        <article class="task-card ${selected ? "selected" : ""}">
+        <article class="task-card ${selected ? "selected" : ""}" data-task-id="${escapeHtml(task.id)}">
           <div class="task-topline">
             <span class="badge ${escapeHtml(task.status)}">${escapeHtml(task.status)}</span>
             <span class="source">${escapeHtml(task.sourcePage)}</span>
@@ -102,15 +126,8 @@ const renderTasks = (tasks) => {
           <h3>${escapeHtml(task.title)}</h3>
           <p class="meta-line">
             ${task.course ? `<span>${escapeHtml(task.course)}</span>` : ""}
-            ${task.dueText ? `<span>${escapeHtml(task.dueText)}</span>` : ""}
+            ${task.dueText ? `<span> &bull; ${escapeHtml(task.dueText)}</span>` : ""}
           </p>
-          ${task.description ? `<p class="description">${escapeHtml(task.description)}</p>` : ""}
-          <div class="card-actions">
-            <button type="button" class="secondary-button task-select-button" data-task-id="${escapeHtml(task.id)}">
-              ${selected ? "Seleccionada" : "Usar contexto"}
-            </button>
-            ${task.url ? `<a href="${escapeHtml(task.url)}" target="_blank" rel="noreferrer">Abrir URL guardada</a>` : ""}
-          </div>
         </article>
       `;
     })
@@ -119,7 +136,6 @@ const renderTasks = (tasks) => {
 
 const renderSnapshot = (snapshot) => {
   if (!snapshot) {
-    meta.textContent = "Todavia no hay datos guardados.";
     renderWarnings([]);
     renderTasks([]);
     renderSources([]);
@@ -127,10 +143,9 @@ const renderSnapshot = (snapshot) => {
     return;
   }
 
-  meta.textContent = `Ultima sincronizacion: ${new Date(snapshot.savedAt).toLocaleString()}. ${snapshot.tasks.length} tareas detectadas.`;
   renderWarnings(snapshot.warnings ?? []);
   renderSources(snapshot.sources ?? []);
-  setStatus(snapshot.requiresManualLogin ? "Login manual detectado" : "Sesion reutilizada", "success");
+  setStatus(snapshot.requiresManualLogin ? "Login manual detectado" : "Sincronizado", "success");
 };
 
 const renderTaskDetail = (detail) => {
@@ -138,7 +153,7 @@ const renderTaskDetail = (detail) => {
 
   if (!detail) {
     taskDetail.className = "detail-card empty";
-    taskDetail.innerHTML = "Todavia no hay detalle cargado.";
+    taskDetail.innerHTML = "Selecciona una tarea en la lista para ver su detalle.";
     return;
   }
 
@@ -149,7 +164,7 @@ const renderTaskDetail = (detail) => {
     ${detail.metadata?.length ? `<div class="detail-metadata">${detail.metadata.map((item) => `<p><strong>${escapeHtml(item.label)}:</strong> ${escapeHtml(item.value)}</p>`).join("")}</div>` : ""}
     <div class="detail-block">
       <h4>Instrucciones</h4>
-      <p>${escapeHtml(detail.instructionsText || "No se pudo extraer texto util.")}</p>
+      <p>${escapeHtml(detail.instructionsText || "No se pudo extraer texto útil.")}</p>
     </div>
     <div class="detail-block">
       <h4>Adjuntos detectados</h4>
@@ -158,11 +173,11 @@ const renderTaskDetail = (detail) => {
           ? detail.attachments
               .map((attachment) =>
                 attachment.url
-                  ? `<p><a href="${escapeHtml(attachment.url)}" target="_blank" rel="noreferrer">${escapeHtml(attachment.name)}</a></p>`
+                  ? `<p><a href="${escapeHtml(attachment.url)}" target="_blank" rel="noreferrer" class="attachment-link">${escapeHtml(attachment.name)}</a></p>`
                   : `<p>${escapeHtml(attachment.name)}</p>`
               )
               .join("")
-          : "<p>No se detectaron adjuntos estructurados.</p>"
+          : "<p class='hint'>No se detectaron adjuntos estructurados.</p>"
       }
     </div>
   `;
@@ -171,26 +186,40 @@ const renderTaskDetail = (detail) => {
 const renderChat = () => {
   if (!state.chatMessages.length) {
     chatLog.className = "chat-log empty";
-    chatLog.textContent = "Todavia no hay mensajes.";
+    chatLog.textContent = "Escribe un mensaje abajo para comenzar la conversación.";
   } else {
     chatLog.className = "chat-log";
     chatLog.innerHTML = state.chatMessages
       .map(
-        (message) => `
-          <article class="chat-bubble ${escapeHtml(message.role)}">
-            <span class="chat-role">${escapeHtml(message.role)}</span>
-            <p>${escapeHtml(message.content)}</p>
-          </article>
-        `
+        (message) => {
+          let htmlContent = escapeHtml(message.content);
+          
+          if (message.role === "assistant" && typeof window.marked !== "undefined" && typeof window.DOMPurify !== "undefined") {
+            const rawMarkup = window.marked.parse(message.content);
+            htmlContent = window.DOMPurify.sanitize(rawMarkup);
+          }
+
+          return `
+            <article class="chat-bubble ${escapeHtml(message.role)}">
+              ${message.role === "user" ? `<p>${htmlContent}</p>` : htmlContent}
+            </article>
+          `;
+        }
       )
       .join("");
   }
 
-  chatMeta.textContent = state.chatThreadId
-    ? `Thread activo: ${state.chatThreadId}`
-    : "Sin conversacion iniciada.";
+  chatMeta.textContent = state.chatThreadId ? "Chat activo" : "Sin conversación";
+  
+  // Auto-scroll al final
+  if (chatScrollArea) {
+    setTimeout(() => {
+      chatScrollArea.scrollTop = chatScrollArea.scrollHeight;
+    }, 10);
+  }
 };
 
+// Data Fetching
 const loadLatest = async () => {
   const response = await fetch("/api/tasks");
   const payload = await response.json();
@@ -202,7 +231,6 @@ const loadLibrary = async () => {
   const response = await fetch("/api/library/tasks");
   const payload = await response.json();
   state.tasks = payload.tasks ?? [];
-  renderTaskOptions();
   renderTasks(state.tasks);
 };
 
@@ -213,25 +241,38 @@ const loadSelectedTask = async () => {
     return;
   }
 
-  const response = await fetch(`/api/library/tasks/${encodeURIComponent(state.selectedTaskId)}`);
-  const payload = await response.json();
+  try {
+    const response = await fetch(`/api/library/tasks/${encodeURIComponent(state.selectedTaskId)}`);
+    const payload = await response.json();
 
-  if (!response.ok || !payload.ok) {
-    throw new Error(payload.error || "No se pudo cargar la tarea.");
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.error || "No se pudo cargar el detalle de la tarea.");
+    }
+
+    const task = payload.task;
+    taskUrlInput.value = task?.url || "";
+    renderTaskDetail(payload.detail ?? null);
+  } catch (error) {
+    showToast(error.message, "error");
+    renderTaskDetail(null);
   }
-
-  const task = payload.task;
-  taskUrlInput.value = task?.url || "";
-  renderTaskDetail(payload.detail ?? null);
 };
 
 const selectTask = async (taskId) => {
+  if (state.selectedTaskId === taskId) return;
+  
   state.selectedTaskId = taskId || "";
-  renderTaskOptions();
   renderTasks(state.tasks);
-  await loadSelectedTask();
+  
+  if (taskId) {
+    taskDetail.innerHTML = '<div class="empty">Cargando contexto...</div>';
+    await loadSelectedTask();
+  } else {
+    renderTaskDetail(null);
+  }
 };
 
+// Event Listeners
 syncButton.addEventListener("click", async () => {
   syncButton.disabled = true;
   setStatus("Sincronizando...", "loading");
@@ -241,54 +282,41 @@ syncButton.addEventListener("click", async () => {
     const payload = await response.json();
 
     if (!response.ok || !payload.ok) {
-      throw new Error(payload.error || "No se pudo sincronizar.");
+      throw new Error(payload.error || "Falló la sincronización.");
     }
 
     state.snapshot = payload.snapshot;
     renderSnapshot(state.snapshot);
     await loadLibrary();
+    showToast("Sincronización completada exitosamente.", "success");
   } catch (error) {
     setStatus("Error", "error");
-    renderWarnings([error instanceof Error ? error.message : String(error)]);
+    const msg = error instanceof Error ? error.message : String(error);
+    renderWarnings([msg]);
+    showToast(`Error al sincronizar: ${msg}`, "error");
   } finally {
     syncButton.disabled = false;
   }
 });
 
-taskSelect.addEventListener("change", async (event) => {
-  const nextTaskId = event.target.value;
-  try {
-    await selectTask(nextTaskId);
-    detailStatus.textContent = nextTaskId
-      ? "Contexto de tarea seleccionado. Si hace falta, pega la URL exacta de la evaluacion y toca Leer detalle."
-      : "Selecciona una tarea o pega una URL de Blackboard.";
-  } catch (error) {
-    detailStatus.textContent = error instanceof Error ? error.message : String(error);
-  }
-});
-
 tasksContainer.addEventListener("click", async (event) => {
-  const button = event.target.closest(".task-select-button");
-  if (!button) {
-    return;
-  }
+  const card = event.target.closest(".task-card");
+  if (!card) return;
 
-  try {
-    await selectTask(button.dataset.taskId || "");
-  } catch (error) {
-    detailStatus.textContent = error instanceof Error ? error.message : String(error);
-  }
+  const taskId = card.dataset.taskId;
+  await selectTask(taskId);
 });
 
 fetchDetailButton.addEventListener("click", async () => {
   const url = taskUrlInput.value.trim();
   if (!url) {
-    detailStatus.textContent = "Pega una URL de Blackboard para leer el detalle.";
+    showToast("Pega una URL de Blackboard válida.", "warning");
     return;
   }
 
   fetchDetailButton.disabled = true;
-  detailStatus.textContent = "Leyendo detalle de la tarea...";
+  const originalText = fetchDetailButton.textContent;
+  fetchDetailButton.textContent = "Extrayendo...";
 
   try {
     const response = await fetch("/api/library/fetch-detail", {
@@ -302,7 +330,7 @@ fetchDetailButton.addEventListener("click", async () => {
     const payload = await response.json();
 
     if (!response.ok || !payload.ok) {
-      throw new Error(payload.error || "No se pudo leer el detalle.");
+      throw new Error(payload.error || "No se pudo extraer el detalle.");
     }
 
     if (!state.selectedTaskId && payload.detail?.taskId) {
@@ -311,11 +339,12 @@ fetchDetailButton.addEventListener("click", async () => {
 
     await loadLibrary();
     await loadSelectedTask();
-    detailStatus.textContent = "Detalle guardado en SQLite y listo para el chat.";
+    showToast("Detalle extraído y guardado correctamente.", "success");
   } catch (error) {
-    detailStatus.textContent = error instanceof Error ? error.message : String(error);
+    showToast(error instanceof Error ? error.message : String(error), "error");
   } finally {
     fetchDetailButton.disabled = false;
+    fetchDetailButton.textContent = originalText;
   }
 });
 
@@ -323,14 +352,18 @@ chatForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const message = chatInput.value.trim();
-  if (!message) {
-    return;
-  }
+  if (!message) return;
 
   chatSendButton.disabled = true;
+  chatInput.disabled = true;
+  
   state.chatMessages.push({ role: "user", content: message });
   renderChat();
   chatInput.value = "";
+
+  // Añadir placeholder temporal de carga
+  state.chatMessages.push({ role: "assistant", content: "..." });
+  renderChat();
 
   try {
     const response = await fetch("/api/chat", {
@@ -344,24 +377,44 @@ chatForm.addEventListener("submit", async (event) => {
     });
     const payload = await response.json();
 
+    state.chatMessages.pop(); // quitar placeholder
+
     if (!response.ok || !payload.ok) {
-      throw new Error(payload.error || "No se pudo enviar el mensaje.");
+      throw new Error(payload.error || "No se pudo procesar la respuesta.");
     }
 
     state.chatThreadId = payload.threadId;
     state.chatMessages.push({ role: "assistant", content: payload.reply });
     renderChat();
   } catch (error) {
+    state.chatMessages.pop(); // quitar placeholder
     state.chatMessages.push({
       role: "assistant",
-      content: error instanceof Error ? error.message : String(error)
+      content: `**Error:** ${error instanceof Error ? error.message : String(error)}`
     });
     renderChat();
+    showToast("Error de conexión con el asistente.", "error");
   } finally {
     chatSendButton.disabled = false;
+    chatInput.disabled = false;
+    chatInput.focus();
   }
 });
 
+// UI Interactions
+chatInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    chatForm.dispatchEvent(new Event("submit"));
+  }
+});
+
+sourcesHeader.addEventListener("click", () => {
+  sourcesPanel.classList.toggle("open");
+  sourcesContent.classList.toggle("hidden");
+});
+
+// Init
 Promise.all([loadLatest(), loadLibrary()])
   .then(async () => {
     if (state.tasks.length > 0) {
