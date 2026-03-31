@@ -52,6 +52,8 @@ Clave para chat:
 
 Configuracion util para tests o fail-fast de login:
 - `BLACKBOARD_LOGIN_WAIT_TIMEOUT_MS` (default `180000`)
+- `BLACKBOARD_AUTO_SYNC_INTERVAL_MINUTES` (default `0`, desactivado)
+- `BLACKBOARD_AUTO_SYNC_MAX_AGE_HOURS` (default `24`, solo para decidir si refrescar una vez al abrir)
 
 Credenciales de Blackboard:
 - via variables `BLACKBOARD_USERNAME` y `BLACKBOARD_PASSWORD`
@@ -79,6 +81,11 @@ npm run test:e2e
 2. La app guarda snapshot en `.data/latest-tasks.json` y datos estructurados en `.data/blackboard.db`.
 3. Puedes seleccionar una tarea o pegar URL directa de evaluacion para extraer detalle.
 4. El chat responde usando contexto de tareas y detalle scrapeado.
+
+Comportamiento de refresco:
+- Manual por defecto desde la UI.
+- Al abrir, la app puede hacer un solo refresh silencioso si la snapshot local tiene mas de 24 horas.
+- No hay polling periodico a menos que configures `BLACKBOARD_AUTO_SYNC_INTERVAL_MINUTES`.
 
 ## Seguridad y privacidad
 

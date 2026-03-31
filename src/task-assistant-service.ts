@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import type { PendingTask, TaskDetail, TaskRecord } from "./types";
 import { fetchTaskDetail } from "./blackboard/scraper";
 import { BlackboardDatabase } from "./database";
+import { SnapshotStore } from "./snapshot-store";
 
 interface OpenRouterMessage {
   role: "system" | "user" | "assistant";
@@ -11,11 +12,21 @@ interface OpenRouterMessage {
 export class TaskAssistantService {
   constructor(
     private readonly dataDir: string,
-    private readonly database: BlackboardDatabase
+    private readonly database: BlackboardDatabase,
+    private readonly store: SnapshotStore
   ) {}
 
-  listTasks(): TaskRecord[] {
-    return this.database.listTasks();
+  async listTasks(): Promise<TaskRecord[]> {
+    const tasks = this.database.listTasks();
+    const snapshot = await this.store.readLatest();
+    if (!snapshot) {
+      return tasks;
+    }
+
+    const snapshotOrder = new Map(snapshot.tasks.map((task, index) => [task.id, index]));
+    return tasks
+      .filter((task) => snapshotOrder.has(task.id))
+      .sort((left, right) => (snapshotOrder.get(left.id) ?? Number.MAX_SAFE_INTEGER) - (snapshotOrder.get(right.id) ?? Number.MAX_SAFE_INTEGER));
   }
 
   getTask(taskId: string): TaskRecord | null {
@@ -26,11 +37,16 @@ export class TaskAssistantService {
     return this.database.getTaskDetail(taskId);
   }
 
-  async fetchAndStoreTaskDetail(input: { taskId?: string; url: string }): Promise<TaskDetail> {
-    const taskId = input.taskId ?? this.buildSyntheticTaskId(input.url);
+  async fetchAndStoreTaskDetail(input: { taskId?: string; url?: string }): Promise<TaskDetail> {
+    const fallbackKey = input.url?.trim() || input.taskId?.trim() || crypto.randomUUID();
+    const taskId = input.taskId ?? this.buildSyntheticTaskId(fallbackKey);
     const existingTask = this.database.getTask(taskId);
 
     if (!existingTask) {
+      if (!input.url?.trim()) {
+        throw new Error("Necesito una URL valida o una tarea sincronizada para releer el detalle.");
+      }
+
       const now = new Date().toISOString();
       const placeholder: PendingTask = {
         id: taskId,
@@ -45,7 +61,8 @@ export class TaskAssistantService {
 
     const detail = await fetchTaskDetail(this.dataDir, {
       taskId,
-      url: input.url
+      url: input.url,
+      task: existingTask ?? undefined
     });
     this.database.upsertTaskDetail(detail);
     return detail;
@@ -64,7 +81,7 @@ export class TaskAssistantService {
     const threadId = input.threadId?.trim() || crypto.randomUUID();
     const selectedTask = input.taskId ? this.database.getTask(input.taskId) : null;
     const selectedDetail = input.taskId ? this.database.getTaskDetail(input.taskId) : null;
-    const recentTasks = this.database.listTasks().slice(0, 12);
+    const recentTasks = (await this.listTasks()).slice(0, 12);
 
     const userMessage = this.database.saveChatMessage({
       threadId,

@@ -38,6 +38,7 @@
               <span id="meta" class="meta-badge">0</span>
             </div>
             <p class="hint">Haz clic en una tarea para ver su detalle y chatear.</p>
+            <p id="hydrationMeta" class="hint"></p>
           </div>
 
           <div id="warnings" class="warnings hidden"></div>
@@ -68,14 +69,14 @@
               <input
                 id="taskUrlInput"
                 type="url"
-                placeholder="Pegar URL de Blackboard..."
+                placeholder="Pegar URL directa de Blackboard (opcional)..."
                 class="compact-input"
               />
-              <button id="fetchDetailButton" type="button" class="secondary-button" title="Extraer instrucciones y adjuntos">Extraer detalle</button>
+              <button id="fetchDetailButton" type="button" class="secondary-button" title="Releer el detalle de la tarea seleccionada o una URL directa">Releer detalle</button>
             </div>
           </div>
           <div class="scroll-area detail-scroll">
-            <div id="taskDetail" class="detail-card empty">Selecciona una tarea en la lista para ver su detalle o usa una URL directa.</div>
+            <div id="taskDetail" class="detail-card empty">Selecciona una tarea en la lista para ver su detalle. Si hace falta, tambien puedes pegar una URL directa.</div>
           </div>
         </div>
 

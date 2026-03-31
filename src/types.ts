@@ -44,6 +44,22 @@ export interface TaskDetail {
   scrapedAt: string;
 }
 
+export interface TaskDetailHydrationFailure {
+  taskId: string;
+  message: string;
+}
+
+export interface TaskDetailHydrationStatus {
+  isRunning: boolean;
+  total: number;
+  completed: number;
+  failed: number;
+  startedAt?: string;
+  finishedAt?: string;
+  lastError?: string;
+  failures: TaskDetailHydrationFailure[];
+}
+
 export interface ChatMessage {
   id: number;
   threadId: string;

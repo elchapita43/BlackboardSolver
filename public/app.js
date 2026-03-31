@@ -2,6 +2,7 @@
 const syncButton = document.querySelector("#syncButton");
 const statusPill = document.querySelector("#statusPill");
 const meta = document.querySelector("#meta");
+const hydrationMeta = document.querySelector("#hydrationMeta");
 const tasksContainer = document.querySelector("#tasks");
 const warningsContainer = document.querySelector("#warnings");
 const sourcesContainer = document.querySelector("#sources");
@@ -24,6 +25,7 @@ const state = {
   tasks: [],
   selectedTaskId: "",
   selectedDetail: null,
+  hydrationStatus: null,
   chatThreadId: "",
   chatMessages: []
 };
@@ -134,6 +136,32 @@ const renderTasks = (tasks) => {
     .join("");
 };
 
+const renderHydrationStatus = (status) => {
+  state.hydrationStatus = status ?? null;
+
+  if (!hydrationMeta) return;
+
+  if (!status) {
+    hydrationMeta.textContent = "";
+    return;
+  }
+
+  if (status.isRunning) {
+    hydrationMeta.textContent = `Enriqueciendo detalles en segundo plano: ${status.completed}/${status.total}`;
+    return;
+  }
+
+  if (status.total > 0 && status.finishedAt) {
+    hydrationMeta.textContent =
+      status.failed > 0
+        ? `Detalle automatico finalizado con ${status.failed} fallo(s).`
+        : "Detalle automatico finalizado.";
+    return;
+  }
+
+  hydrationMeta.textContent = "";
+};
+
 const renderSnapshot = (snapshot) => {
   if (!snapshot) {
     renderWarnings([]);
@@ -157,6 +185,11 @@ const renderTaskDetail = (detail) => {
     return;
   }
 
+  const instructionsText = detail.instructionsText?.trim();
+  const fallbackInstructions = detail.attachments?.length
+    ? "Blackboard no muestra texto visible para esta actividad, pero si detecte adjuntos abajo. La consigna probablemente este ahi."
+    : "Blackboard no mostro instrucciones visibles para esta actividad.";
+
   taskDetail.className = "detail-card";
   taskDetail.innerHTML = `
     <h3>${escapeHtml(detail.title || "Detalle de tarea")}</h3>
@@ -164,7 +197,7 @@ const renderTaskDetail = (detail) => {
     ${detail.metadata?.length ? `<div class="detail-metadata">${detail.metadata.map((item) => `<p><strong>${escapeHtml(item.label)}:</strong> ${escapeHtml(item.value)}</p>`).join("")}</div>` : ""}
     <div class="detail-block">
       <h4>Instrucciones</h4>
-      <p>${escapeHtml(detail.instructionsText || "No se pudo extraer texto útil.")}</p>
+      <p>${escapeHtml(instructionsText || fallbackInstructions)}</p>
     </div>
     <div class="detail-block">
       <h4>Adjuntos detectados</h4>
@@ -234,6 +267,12 @@ const loadLibrary = async () => {
   renderTasks(state.tasks);
 };
 
+const loadHydrationStatus = async () => {
+  const response = await fetch("/api/tasks/hydration-status");
+  const payload = await response.json();
+  renderHydrationStatus(payload.status ?? null);
+};
+
 const loadSelectedTask = async () => {
   if (!state.selectedTaskId) {
     taskUrlInput.value = "";
@@ -251,6 +290,21 @@ const loadSelectedTask = async () => {
 
     const task = payload.task;
     taskUrlInput.value = task?.url || "";
+    if (!payload.detail && state.hydrationStatus?.isRunning) {
+      renderTaskDetail({
+        title: task?.title,
+        course: task?.course,
+        metadata: [],
+        attachments: [],
+        instructionsText: "Extrayendo detalle automaticamente en segundo plano...",
+        taskId: task?.id,
+        taskUrl: task?.url || "",
+        rawText: task?.rawText || "",
+        scrapedAt: new Date().toISOString()
+      });
+      return;
+    }
+
     renderTaskDetail(payload.detail ?? null);
   } catch (error) {
     showToast(error.message, "error");
@@ -288,6 +342,7 @@ syncButton.addEventListener("click", async () => {
     state.snapshot = payload.snapshot;
     renderSnapshot(state.snapshot);
     await loadLibrary();
+    await loadHydrationStatus();
     showToast("Sincronización completada exitosamente.", "success");
   } catch (error) {
     setStatus("Error", "error");
@@ -309,8 +364,8 @@ tasksContainer.addEventListener("click", async (event) => {
 
 fetchDetailButton.addEventListener("click", async () => {
   const url = taskUrlInput.value.trim();
-  if (!url) {
-    showToast("Pega una URL de Blackboard válida.", "warning");
+  if (!url && !state.selectedTaskId) {
+    showToast("Selecciona una tarea o pega una URL de Blackboard valida.", "warning");
     return;
   }
 
@@ -324,7 +379,7 @@ fetchDetailButton.addEventListener("click", async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         taskId: state.selectedTaskId || undefined,
-        url
+        url: url || undefined
       })
     });
     const payload = await response.json();
@@ -338,8 +393,9 @@ fetchDetailButton.addEventListener("click", async () => {
     }
 
     await loadLibrary();
+    await loadHydrationStatus();
     await loadSelectedTask();
-    showToast("Detalle extraído y guardado correctamente.", "success");
+    showToast("Detalle releido y guardado correctamente.", "success");
   } catch (error) {
     showToast(error instanceof Error ? error.message : String(error), "error");
   } finally {
@@ -414,8 +470,26 @@ sourcesHeader.addEventListener("click", () => {
   sourcesContent.classList.toggle("hidden");
 });
 
+const pollHydrationStatus = async () => {
+  try {
+    await loadHydrationStatus();
+    if (state.hydrationStatus?.isRunning) {
+      await loadLibrary();
+      if (state.selectedTaskId) {
+        await loadSelectedTask();
+      }
+    }
+  } catch {
+    // Best effort UI polling only.
+  }
+};
+
+setInterval(() => {
+  pollHydrationStatus();
+}, 3000);
+
 // Init
-Promise.all([loadLatest(), loadLibrary()])
+Promise.all([loadLatest(), loadLibrary(), loadHydrationStatus()])
   .then(async () => {
     if (state.tasks.length > 0) {
       await selectTask(state.tasks[0].id);
