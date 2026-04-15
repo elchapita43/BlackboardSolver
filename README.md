@@ -86,14 +86,7 @@ Comportamiento de refresco:
 - Manual por defecto desde la UI.
 - Al abrir, la app puede hacer un solo refresh silencioso si la snapshot local tiene mas de 24 horas.
 - No hay polling periodico a menos que configures `BLACKBOARD_AUTO_SYNC_INTERVAL_MINUTES`.
-
-## Seguridad y privacidad
-
-- No subas `.env`, `.data/`, logs ni reportes de test.
-- No subas `credentials.json` ni API keys.
-- Si compartiste una key por chat, rotala.
-- Este repo esta preparado para publicarse sin incluir sesiones, bases locales ni credenciales.
-
+- 
 ## Licencia
 
 Este proyecto se distribuye bajo licencia MIT. Ver [`LICENSE`](C:/Users/Tobia/OneDrive/Aplicaciones/BlackboardSolver/LICENSE).
